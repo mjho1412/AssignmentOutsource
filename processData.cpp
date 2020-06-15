@@ -28,9 +28,12 @@ static map<string, CodeValue> s_mapCodeValues = {
 
 ProcessData::ProcessData()
 {
+	MyLList<CurrencyPairInfoTree> *list = new MyLList<CurrencyPairInfoTree>();
+	data = list;
 }
 ProcessData::~ProcessData()
 {
+	delete data;
 }
 /* 
 	Split the command line into instruction and its parameters
