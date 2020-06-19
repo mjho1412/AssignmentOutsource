@@ -141,5 +141,16 @@ int ProcessData::process(string line)
 */
 int ProcessData::insert(const string *sp, const int n)
 {
+	if (n != 6) {
+		return -1;
+	}
+
+	BidAndAsk mData = BidAndAsk(atoi(sp[3].c_str()), stof(sp[4]), stof(sp[5]));
+
+	//data->insert(mData);
+
+	/*string baseCurrency = sp[1];
+	string quoteCurrency = sp[2];*/
+
 	return 1;
 }

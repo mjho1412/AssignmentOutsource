@@ -5,24 +5,18 @@ class MyLink {
 public:
 	T data;
 	MyLink<T>* next;
-	MyLink<T>() {}
-	MyLink<T>(const MyLink<T> &n = nullptr) { next = n; }
-	MyLink<T>(const T& ele, const MyLink<T> &n = nullptr) {
-		data = ele;
+    //~MyLink() { delete next; }
+	MyLink<T>( MyLink<T> *n = nullptr) { next = n; }
+	MyLink<T>(const T& ele,  MyLink<T> *n = nullptr) {
+        data = ele;
 		next = n;
 	}
 };
 
-template <typename T>
-class MyList
-{
-    // Return: The number of elements in the list.
-    virtual int length() const = 0;
-    virtual void insert(const T& ele) = 0;
-};
+
 
 template <typename T>
-class MyLList : public MyList<T>
+class MyLList
 {
 private:
     MyLink<T>* head;
@@ -56,14 +50,7 @@ public:
     }
 };
 
-class BidAndAsk : Node<int> {
 
-};
-
-class CurrencyPairInfoTree : AVLTree<BidAndAsk>
-{
-
-};
 
 class ProcessData
 {
