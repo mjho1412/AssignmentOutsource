@@ -28,7 +28,7 @@ static map<string, CodeValue> s_mapCodeValues = {
 
 ProcessData::ProcessData()
 {
-	MyLList<CurrencyPairInfoTree> *list = new MyLList<CurrencyPairInfoTree>();
+	LList<CurrencyPairInfoTree> *list = new LList<CurrencyPairInfoTree>();
 	data = list;
 }
 ProcessData::~ProcessData()
@@ -82,11 +82,11 @@ int ProcessData::count_space(string s) {
 
 int ProcessData::process(string line)
 {
-	cout << line << endl;
+	//cout << line << endl;
 
 	string *p;
 	int n = ProcessData::split(line, p);
-	cout << p[0] << endl;
+	//cout << p[0] << endl;
 	if (n <= 0)
 	{
 		delete[] p;
@@ -107,8 +107,10 @@ int ProcessData::process(string line)
 			res = this->insert(p, n);
 			break;
 		case updCode:
+			//res = this->update(p, n);
 			break;
 		case delCode:
+			//res = this->remove(p, n);
 			break;
 		case obCode:
 			break;
@@ -141,16 +143,100 @@ int ProcessData::process(string line)
 */
 int ProcessData::insert(const string *sp, const int n)
 {
+	if (n != 6) return -1;
+
+	string baseCurrency = sp[1].c_str();
+	string quoteCurrency = sp[2].c_str();
+	int time = atoi(sp[3].c_str());
+	float bidPrice = stof(sp[4]);
+	float askPrice = stof(sp[5]);
+	BidAndAsk mData = BidAndAsk(time, bidPrice, askPrice);
+
+	CurrencyPairInfoTree* treePos = findTreeOfPair(baseCurrency, quoteCurrency);
+	if (treePos == NULL) {
+		CurrencyPairInfoTree*newTree = new CurrencyPairInfoTree(baseCurrency, quoteCurrency);
+		((LList<CurrencyPairInfoTree>*)data)->insertAtEnd(*newTree);
+	}
+	treePos = findTreeOfPair(baseCurrency, quoteCurrency);
+
+	int result = treePos->insert(mData);
+	
+	cout << "After add : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :"<<endl;
+	treePos->printTreeStructure();
+	treePos = nullptr;
+	cout << endl << endl;
+
+	return result;
+}
+
+CurrencyPairInfoTree* ProcessData::findTreeOfPair(string baseCurrency, string quoteCurrency) {
+	CurrencyPairInfoTree* exchange = ((LList<CurrencyPairInfoTree>*)data)->getFirstNode();
+	while (exchange != NULL && !exchange->isEqual(baseCurrency, quoteCurrency))
+	{
+		((LList<CurrencyPairInfoTree>*)data)->moveNextNode();
+		exchange = ((LList<CurrencyPairInfoTree>*)data)->getCurrentNode();
+	}
+	return exchange;
+}
+
+int ProcessData::remove(const string* sp, const int n)
+{
+	if (n != 4 && n!=5) {
+		return -1;
+	}
+
+	string baseCurrency = sp[1].c_str();
+	string quoteCurrency = sp[2].c_str();
+	int startTime = atoi(sp[3].c_str());
+	int endTime;
+	if (n == 4) {
+		endTime = startTime;
+	}
+	else {
+		endTime = atoi(sp[4].c_str());
+	}
+
+	CurrencyPairInfoTree* treePos = findTreeOfPair(baseCurrency, quoteCurrency);
+	if (treePos == NULL) {
+		treePos = nullptr;
+		return -1;
+	}
+	else {
+		int result = treePos->removeByRange(startTime, endTime);
+		
+		cout << "After remove : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
+		treePos->printTreeStructure();
+		treePos = nullptr;
+		cout << endl << endl;
+		return result;
+	}
+}
+
+int ProcessData::update(const string* sp, const int n)
+{
 	if (n != 6) {
 		return -1;
 	}
 
-	BidAndAsk mData = BidAndAsk(atoi(sp[3].c_str()), stof(sp[4]), stof(sp[5]));
+	string baseCurrency = sp[1].c_str();
+	string quoteCurrency = sp[2].c_str();
+	int time = atoi(sp[3].c_str());
+	float bidPrice = stof(sp[4]);
+	float askPrice = stof(sp[5]);
+	BidAndAsk mData = BidAndAsk(time, bidPrice, askPrice);
 
-	//data->insert(mData);
-
-	/*string baseCurrency = sp[1];
-	string quoteCurrency = sp[2];*/
-
-	return 1;
+	CurrencyPairInfoTree* treePos = findTreeOfPair(baseCurrency, quoteCurrency);
+	if (treePos == NULL) {
+		treePos = nullptr;
+		return 0;
+	}
+	else {
+		int result = treePos->updateNode(mData);
+		
+		cout << "After update : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
+		treePos->printTreeStructure();
+		treePos = nullptr;
+		cout << endl << endl;
+		return result;
+	}
 }

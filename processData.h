@@ -1,53 +1,164 @@
 #include "dbLib.h"
 
 template <typename T>
-class MyLink {
+class Link {
 public:
 	T data;
-	MyLink<T>* next;
-    //~MyLink() { delete next; }
-	MyLink<T>( MyLink<T> *n = nullptr) { next = n; }
-	MyLink<T>(const T& ele,  MyLink<T> *n = nullptr) {
-        data = ele;
+	Link<T>* next;
+	Link<T>() {}
+	Link<T>(const Link<T>* n) { next = n; }
+	Link<T>(const T& ele, Link<T>* n) {
+		data = ele;
 		next = n;
 	}
 };
 
-
+template <typename T>
+class List {
+	// Return: The number of elements in the list.
+	virtual int length() const = 0;
+	virtual void insert(const T& ele) = 0;
+	virtual void insertAtEnd(const T& ele) = 0;
+	virtual void moveNextNode() = 0;
+	virtual T* getFirstNode() = 0;
+	virtual T* getNextNode() = 0;
+	virtual T* getCurrentNode() = 0;
+	virtual void removeAll() = 0;
+	virtual void removeHeadNode() = 0;
+	virtual void removeNextNode() = 0;
+};
 
 template <typename T>
-class MyLList
-{
+class LList : public List<T> {
 private:
-    MyLink<T>* head;
-    MyLink<T>* last;
-    MyLink<T>* curr;
-    int cnt;
-
+	Link<T>* head;
+	Link<T>* last;
+	Link<T>* curr;
+	int cnt;
 public:
-    MyLList() { head = last = curr = new MyLink<T>(); }
-    ~MyLList() {
-        last = curr = nullptr;
-        while (head != NULL) {
-            MyLink<T>* temp = head;
-            head = head->next;
-            delete temp;
-        }
-    }
-    int length() const { return cnt; }
-    void insert(const T& ele)
-    {
-        if (last == nullptr)
-        {
-            head = last = curr = new MyLink<T>(ele);
-        }
-        else {
-            last->next = new MyLink<T>(ele);
-            last = last->next;
-        }
-        cnt++;
-        //curr->next = new Link<T>(ele, curr->next);
-    }
+	~LList() {
+		removeAll();
+	}
+	LList() { head = last = curr = nullptr; cnt = 0; }
+	int length() const { return cnt; }
+	void insert(const T& ele) {
+		curr->next = new Link<T>(ele, curr->next);
+		if (last == curr)
+		{
+			last = curr->next;
+		}
+		cnt++;
+	}
+	void insertAtHead(const T& ele) {
+		if (head == nullptr)
+		{
+			head = last = curr = new Link<T>(ele, nullptr);
+		}
+		else
+		{
+			head = new Link<T>(ele, head);
+		}
+		cnt++;
+	}
+	void insertAtEnd(const T& ele)
+	{
+		if (last == nullptr)
+		{
+			head = last = curr = new Link<T>(ele, nullptr);
+		}
+		else
+		{
+			last->next = new Link<T>(ele, nullptr);
+			last = last->next;
+		}
+		cnt++;
+	}
+	void moveNextNode()
+	{
+		curr = curr->next;
+	}
+	T* getFirstNode()
+	{
+		curr = head;
+		if (curr == nullptr)
+		{
+			return nullptr;
+		}
+		return &(curr->data);
+	}
+	T* getNextNode()
+	{
+		if (curr == nullptr)
+		{
+			return nullptr;
+		}
+		return &(curr->next->data);
+	}
+
+	T* getCurrentNode()
+	{
+		if (curr == nullptr)
+		{
+			return nullptr;
+		}
+		return &(curr->data);
+	}
+	void removeAll()
+	{
+		curr = head;
+		while (curr != nullptr)
+		{
+			head = curr->next;
+			delete curr;
+			curr = head;
+		}
+		delete head;
+		//if(last != nullptr) delete last;
+		curr = head = last = nullptr;
+		cnt = 0;
+
+
+
+		delete curr;
+	}
+	void removeHeadNode()
+	{
+		curr = head;
+		if (curr == nullptr)
+		{
+			return;
+		}
+		if (head == last)
+		{
+			head = last = nullptr;
+		}
+		else
+		{
+			head = curr->next;
+		}
+		delete curr;
+		curr = head;
+		cnt--;
+	}
+	void removeNextNode()
+	{
+		if (curr == nullptr)
+		{
+			return;
+		}
+		else if (curr->next != nullptr)
+		{
+			if (curr->next == last)
+			{
+				last = curr;
+			}
+			Link<T>* deletedNode = curr->next;
+			curr->next = deletedNode->next;
+			delete deletedNode;
+			deletedNode = NULL;
+			cnt--;
+		}
+	}
 };
 
 
@@ -55,7 +166,7 @@ public:
 class ProcessData
 {
 private:
-	MyLList<CurrencyPairInfoTree> *data;
+	LList<CurrencyPairInfoTree> *data;
 	static const int MAXSIZECODE = 8;
 	static int split(string line, string *&sp);
 	static int count_space(string s);
@@ -64,6 +175,9 @@ public:
 	~ProcessData();
 	int process(string line);
 	int insert(const string *sp, const int n);
+	int remove(const string* sp, const int n);
+	int update(const string* sp, const int n);
+	CurrencyPairInfoTree* findTreeOfPair(string baseCurrency, string quoteCurrency);
 };
 
 class Util {

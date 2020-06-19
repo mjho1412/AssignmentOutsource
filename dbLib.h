@@ -82,11 +82,18 @@ public:
 class CurrencyPairInfoTree
 {
 private:
+    string baseCurrency;
+    string quoteCurrency;
     Node* root;
 
 public:
-    CurrencyPairInfoTree()
+    CurrencyPairInfoTree() {
+
+    }
+    CurrencyPairInfoTree(string baseCurrency, string quoteCurrency)
     {
+        this->baseCurrency = baseCurrency;
+        this->quoteCurrency = quoteCurrency;
         this->root = nullptr;
     }
     ~CurrencyPairInfoTree() {
@@ -95,11 +102,18 @@ public:
         }
     }
 
+    int showResult() {
+        if (root == NULL) {
+            return -1;
+        }
+        else {
+            return root->data.time;
+        }
+    }
 
-    void insert(const BidAndAsk& ele) {
-        //cout<<"Adding" << ele.time<< endl;
+    int insert(const BidAndAsk& ele) {
         root = insertRec(root, ele);
-        //cout << root->data.time;
+        return showResult();
     }
 
     Node* insertRec(Node*& node, const BidAndAsk& data)
@@ -324,9 +338,49 @@ public:
         return node;
     }
 
-    void remove(const BidAndAsk& value)
+    int remove(const BidAndAsk& value)
     {
         root = removeRec(root, value);
+        return showResult();
+    }
+
+    int removeByRange(int startTime, int endTime)
+    {
+        while (root != NULL) {
+            if (root->data.time >= startTime && root->data.time <= endTime) {
+                root = removeRec(root, root->data);
+            }
+            else {
+                break;
+            }
+        }
+        return showResult();
+    }
+
+    Node* search(Node* node, int time)
+    {
+        if (node == NULL || node->data.time == time)
+            return node;
+
+        if (node->data.time < time)
+            return search(node->right, time);
+
+        return search(node->left, time);
+    }
+
+    int updateNode(BidAndAsk value) {
+        return 0;
+       /* Node* nodeToUpdate = search(root, value.time);
+        if (nodeToUpdate == NULL) {
+            nodeToUpdate = nullptr;
+            return 0;
+        }
+        else {
+            nodeToUpdate->data = value;
+            nodeToUpdate = nullptr;
+            return showResult();
+        }*/
+       
     }
 
     void printNSpace(int n)
@@ -384,5 +438,10 @@ public:
             if (level == height)
                 return;
         }
+    }
+
+    bool isEqual(string baseCurrency, string quoteCurrency)
+    {
+        return this->baseCurrency == baseCurrency && this->quoteCurrency == quoteCurrency;
     }
 };
