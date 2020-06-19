@@ -66,5 +66,66 @@ public:
 	int insert(const string *sp, const int n);
 };
 
+class Util {
+public:
+	static bool StrToInt(string str, int& n) {
+		if (isValidNumber(str, false))
+		{
+			n = atoi(str.c_str());
+			return true;
+		}
+		return false;
+	}
+	static bool StrToFloat(string str, float& n)
+	{
+		try
+		{
+			if (!isValidNumber(str, true))
+			{
+				return false;
+			}
+			else
+			{
+				n = stof(str);
+				return true;
+			}
+		}
+		catch (const std::exception&)
+		{
+			return false;
+		}
+	}
+	static bool isValidNumber(string str, bool isFloat)
+	{
+		if (str.length() == 0)
+		{
+			return false;
+		}
+		bool hasPoint = false;
+		for (int i = 0; i < str.length(); i++)
+		{
+			bool isdit = isdigit(str[i]);
+			if (!isdit)
+			{
+				if (str[i] == '.' && isFloat)
+				{
+					if (!hasPoint)
+					{
+						hasPoint = true;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else
+				{
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+};
 
 
