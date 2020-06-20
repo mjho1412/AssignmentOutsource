@@ -107,10 +107,10 @@ int ProcessData::process(string line)
 			res = this->insert(p, n);
 			break;
 		case updCode:
-			//res = this->update(p, n);
+			res = this->update(p, n);
 			break;
 		case delCode:
-			//res = this->remove(p, n);
+			res = this->remove(p, n);
 			break;
 		case obCode:
 			break;
@@ -150,7 +150,8 @@ int ProcessData::insert(const string *sp, const int n)
 	int time = atoi(sp[3].c_str());
 	float bidPrice = stof(sp[4]);
 	float askPrice = stof(sp[5]);
-	BidAndAsk mData = BidAndAsk(time, bidPrice, askPrice);
+	BidAndAsk mData = BidAndAsk(bidPrice, askPrice);
+	BaseData<BidAndAsk> mDataToInsert = BaseData<BidAndAsk>(time, mData);
 
 	CurrencyPairInfoTree* treePos = findTreeOfPair(baseCurrency, quoteCurrency);
 	if (treePos == NULL) {
@@ -158,8 +159,7 @@ int ProcessData::insert(const string *sp, const int n)
 		((LList<CurrencyPairInfoTree>*)data)->insertAtEnd(*newTree);
 	}
 	treePos = findTreeOfPair(baseCurrency, quoteCurrency);
-
-	int result = treePos->insert(mData);
+	int result = treePos->insert(mDataToInsert);
 	
 	cout << "After add : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :"<<endl;
 	treePos->printTreeStructure();
@@ -223,20 +223,60 @@ int ProcessData::update(const string* sp, const int n)
 	int time = atoi(sp[3].c_str());
 	float bidPrice = stof(sp[4]);
 	float askPrice = stof(sp[5]);
-	BidAndAsk mData = BidAndAsk(time, bidPrice, askPrice);
+	BidAndAsk mData = BidAndAsk(bidPrice, askPrice);
+	BaseData<BidAndAsk> mDataToUpdate = BaseData<BidAndAsk>(time, mData);
 
 	CurrencyPairInfoTree* treePos = findTreeOfPair(baseCurrency, quoteCurrency);
 	if (treePos == NULL) {
 		treePos = nullptr;
-		return 0;
+		return -1;
 	}
 	else {
-		int result = treePos->updateNode(mData);
+		int result = treePos->updateNode(mDataToUpdate);
 		
 		cout << "After update : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
 		treePos->printTreeStructure();
 		treePos = nullptr;
 		cout << endl << endl;
 		return result;
+	}
+}
+
+int ProcessData::createOrAdjustMarginAccount(const string* sp, const int n) {
+	if (n != 2) {
+		return -1;
+	}
+
+	int newBalance = stof(sp[1]);
+	has_opened_margin_account = true;
+	accountBalance = newBalance;
+	return 1;
+
+}
+
+int ProcessData::checkMarginAccount(const string* sp, const int n) {
+	if (n != 1) {
+		return -1;
+	}
+	if (has_opened_margin_account) {
+		return Util::getIntPart(accountBalance);
+	}
+	else {
+		return -1;
+	}
+
+	
+}
+
+int ProcessData::setMarginPercent(const string* sp, const int n) {
+	if (n != 2) {
+		return -1;
+	}
+
+	if (has_opened_margin_account) {
+		return Util::getIntPart(accountBalance * marginPercent);
+	}
+	else {
+		return -1;
 	}
 }

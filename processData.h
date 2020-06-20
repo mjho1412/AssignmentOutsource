@@ -170,6 +170,9 @@ private:
 	static const int MAXSIZECODE = 8;
 	static int split(string line, string *&sp);
 	static int count_space(string s);
+	bool has_opened_margin_account = false;
+	int accountBalance;
+	int marginPercent = 1;
 public:
 	ProcessData();
 	~ProcessData();
@@ -178,6 +181,9 @@ public:
 	int remove(const string* sp, const int n);
 	int update(const string* sp, const int n);
 	CurrencyPairInfoTree* findTreeOfPair(string baseCurrency, string quoteCurrency);
+	int createOrAdjustMarginAccount(const string* sp, const int n);
+	int checkMarginAccount(const string* sp, const int n);
+	int setMarginPercent(const string* sp, const int n);
 };
 
 class Util {
@@ -239,6 +245,10 @@ public:
 			}
 		}
 		return true;
+	}
+
+	static int getIntPart(float input) {
+		return static_cast<int>(input);
 	}
 };
 

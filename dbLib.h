@@ -46,11 +46,9 @@
 
 class BidAndAsk {
 public:
-    int time;
     float bidPrice;
     float askPrice;
-    BidAndAsk(int mTime, float mBidPrice, float mAskPrice) {
-        time = mTime;
+    BidAndAsk(float mBidPrice, float mAskPrice) {
         bidPrice = mBidPrice;
         askPrice = mAskPrice;
     }
@@ -58,14 +56,29 @@ public:
     }
 };
 
+template <typename T>
+class BaseData {
+public:
+    int time;
+    T baseData;
+    BaseData() {
+
+    }
+    BaseData(int mTime, T mData) {
+        time = mTime;
+        baseData = mData;
+    }
+};
+
+template <typename T>
 class Node
 {
 public:
-    BidAndAsk data;
+    BaseData<T> data;
     Node* left;
     Node* right;
 
-    Node(const BidAndAsk& ele)
+    Node(const BaseData<T>& ele)
     {
         data = ele;
         this->left = nullptr;
@@ -79,28 +92,30 @@ public:
 };
 
 
-class CurrencyPairInfoTree
+
+template <typename T>
+class AVLTree
 {
 private:
     string baseCurrency;
     string quoteCurrency;
-    Node* root;
+    Node<T>* root;
 
 public:
-    CurrencyPairInfoTree() {
-
-    }
-    CurrencyPairInfoTree(string baseCurrency, string quoteCurrency)
+    AVLTree(string baseCurrency, string quoteCurrency)
     {
         this->baseCurrency = baseCurrency;
         this->quoteCurrency = quoteCurrency;
         this->root = nullptr;
-    }
-    ~CurrencyPairInfoTree() {
+    };
+    ~AVLTree() {
         while (root != NULL) {
             remove(root->data);
         }
-    }
+    };
+    AVLTree() {
+
+    };
 
     int showResult() {
         if (root == NULL) {
@@ -111,16 +126,16 @@ public:
         }
     }
 
-    int insert(const BidAndAsk& ele) {
+    int insert(const BaseData<T>& ele) {
         root = insertRec(root, ele);
         return showResult();
     }
 
-    Node* insertRec(Node*& node, const BidAndAsk& data)
+    Node<T>* insertRec(Node<T>*& node, const  BaseData<T>& data)
     {
         /* 1. Perform the normal BST insertion */
         if (node == NULL) {
-            return new Node(data);
+            return new Node<T>(data);
         }
 
 
@@ -179,10 +194,10 @@ public:
         return node;
     }
 
-    Node* getLeftMost(Node*& node)
+    Node<T>* getLeftMost(Node<T>*& node)
     {
 
-        Node* current = node;
+        Node<T>* current = node;
 
         /* loop down to find the leftmost leaf */
         while (current->right != NULL)
@@ -191,7 +206,7 @@ public:
         return current;
     }
 
-    int getBalance(Node* N)
+    int getBalance(Node<T>* N)
     {
         cout << "<<" << N->data.time;
         if (N == NULL)
@@ -204,7 +219,7 @@ public:
         return (a > b) ? a : b;
     }
 
-    int getHeightRec(Node* node)
+    int getHeightRec(Node<T>* node)
     {
         if (node == NULL)
             return 0;
@@ -213,10 +228,10 @@ public:
         return (lh > rh ? lh : rh) + 1;
     }
 
-    Node* rightRotate(Node*& y)
+    Node<T>* rightRotate(Node<T>*& y)
     {
-        Node* x = y->left;
-        Node* T2 = x->right;
+        Node<T>* x = y->left;
+        Node<T>* T2 = x->right;
 
         x->right = y;
         y->left = T2;
@@ -224,10 +239,10 @@ public:
         return x;
     }
 
-    Node* leftRotate(Node*& x)
+    Node<T>* leftRotate(Node<T>*& x)
     {
-        Node* y = x->right;
-        Node* T2 = y->left;
+        Node<T>* y = x->right;
+        Node<T>* T2 = y->left;
 
         y->left = x;
         x->right = T2;
@@ -235,7 +250,7 @@ public:
         return y;
     }
 
-    Node* removeRec(Node*& node, const BidAndAsk& value)
+    Node<T>* removeRec(Node<T>*& node, const BaseData<T>& value)
     {
         // TODO
         if (node == NULL)
@@ -254,7 +269,7 @@ public:
             if ((node->left == NULL) ||
                 (node->right == NULL))
             {
-                Node* temp = node->left ?
+                Node<T>* temp = node->left ?
                     node->left :
                     node->right;
 
@@ -273,7 +288,7 @@ public:
             {
                 // node with two children: Get the inorder  
                 // successor (smallest in the right subtree)  
-                Node* temp = getLeftMost(node->left);
+                Node<T>* temp = getLeftMost(node->left);
 
                 // Copy the inorder successor's  
                 // data to this node  
@@ -338,7 +353,7 @@ public:
         return node;
     }
 
-    int remove(const BidAndAsk& value)
+    int remove(const BaseData<T>& value)
     {
         root = removeRec(root, value);
         return showResult();
@@ -357,7 +372,7 @@ public:
         return showResult();
     }
 
-    Node* search(Node* node, int time)
+    Node<T>* search(Node<T>* node, int time)
     {
         if (node == NULL || node->data.time == time)
             return node;
@@ -368,9 +383,8 @@ public:
         return search(node->left, time);
     }
 
-    int updateNode(BidAndAsk value) {
-        return 0;
-       /* Node* nodeToUpdate = search(root, value.time);
+    int updateNode(BaseData<T> value) {
+        Node<T>* nodeToUpdate = search(root, value.time);
         if (nodeToUpdate == NULL) {
             nodeToUpdate = nullptr;
             return 0;
@@ -379,7 +393,7 @@ public:
             nodeToUpdate->data = value;
             nodeToUpdate = nullptr;
             return showResult();
-        }*/
+        }
        
     }
 
@@ -398,9 +412,9 @@ public:
             cout << "NULL\n";
             return;
         }
-        queue<Node*> q;
+        queue<Node<T>*> q;
         q.push(root);
-        Node* temp;
+        Node<T>* temp;
         int count = 0;
         int maxNode = 1;
         int level = 0;
@@ -420,6 +434,7 @@ public:
             else
             {
 
+                //cout << temp->data.time <<"("<<temp->data.askPrice<<"),("<<temp->data.bidPrice<<")";
                 cout << temp->data.time;
                 q.push(temp->left);
                 q.push(temp->right);
@@ -444,4 +459,11 @@ public:
     {
         return this->baseCurrency == baseCurrency && this->quoteCurrency == quoteCurrency;
     }
+};
+
+class CurrencyPairInfoTree : public  AVLTree<BidAndAsk> {
+public:
+    CurrencyPairInfoTree(string baseCurrency, string quoteCurrency):AVLTree<BidAndAsk>(baseCurrency, quoteCurrency){
+    };
+    CurrencyPairInfoTree(){}
 };
