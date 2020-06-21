@@ -31,11 +31,12 @@ class List {
 template <typename T>
 class LList : public List<T> {
 private:
-	Link<T>* head;
+	
 	Link<T>* last;
 	Link<T>* curr;
 	int cnt;
 public:
+	Link<T>* head;
 	~LList() {
 		removeAll();
 	}
@@ -159,6 +160,19 @@ public:
 			cnt--;
 		}
 	}
+
+	bool checkForDuplicate(T inputData, bool (*isEqual)(T, T)) {
+		Link<T>* temp = head;
+		while (temp != NULL) {
+			if ((*isEqual)(temp->data, inputData)) {
+				return true;
+			}
+			else {
+				temp = temp->next;
+			}
+		}
+		return false;
+	}
 };
 
 
@@ -167,11 +181,13 @@ class ProcessData
 {
 private:
 	LList<CurrencyPairInfoTree> *data;
+	LList<OrderInfoTree>* orderData;
+	LList<string>* orderIdList;
 	static const int MAXSIZECODE = 8;
 	static int split(string line, string *&sp);
 	static int count_space(string s);
 	bool has_opened_margin_account = false;
-	int accountBalance;
+	int accountBalance = 0;
 	int marginPercent = 1;
 public:
 	ProcessData();
@@ -181,9 +197,15 @@ public:
 	int remove(const string* sp, const int n);
 	int update(const string* sp, const int n);
 	CurrencyPairInfoTree* findTreeOfPair(string baseCurrency, string quoteCurrency);
+	OrderInfoTree* findOrderTree(string baseCurrency, string quoteCurrency);
 	int createOrAdjustMarginAccount(const string* sp, const int n);
 	int checkMarginAccount(const string* sp, const int n);
 	int setMarginPercent(const string* sp, const int n);
+	int addNewOrder(const string* sp, const int n);
+	int closeOrder(const string* sp, const int n);
+	int closeSpecificOrder(int time, string orderId, bool isSell);
+	int checkIfClosestPairExist(string baseCurr, string quoteCurr, int time, float& u);
+	
 };
 
 class Util {

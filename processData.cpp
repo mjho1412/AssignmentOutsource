@@ -1,5 +1,7 @@
 #include "processData.h"
 
+const int AMOUNT_EACH_LOT = 100000;
+
 enum CodeValue
 {
 	sdCode,
@@ -30,10 +32,16 @@ ProcessData::ProcessData()
 {
 	LList<CurrencyPairInfoTree> *list = new LList<CurrencyPairInfoTree>();
 	data = list;
+	LList<OrderInfoTree>* list2 = new LList<OrderInfoTree>();
+	orderData = list2;
+	LList<string>* list3 = new LList<string>();
+	orderIdList = list3;
 }
 ProcessData::~ProcessData()
 {
 	delete data;
+	delete orderData;
+	delete orderIdList;
 }
 /* 
 	Split the command line into instruction and its parameters
@@ -98,10 +106,13 @@ int ProcessData::process(string line)
 		switch (s_mapCodeValues[p[0]])
 		{
 		case sdCode:
+			res = this->createOrAdjustMarginAccount(p, n);
 			break;
 		case cdCode:
+			res = this->checkMarginAccount(p, n);
 			break;
 		case slCode:
+			res = this->setMarginPercent(p, n);
 			break;
 		case insCode:
 			res = this->insert(p, n);
@@ -113,12 +124,16 @@ int ProcessData::process(string line)
 			res = this->remove(p, n);
 			break;
 		case obCode:
+			res = this->addNewOrder(p, n);
 			break;
 		case cbCode:
+			res = this->closeOrder(p, n);
 			break;
 		case osCode:
+			res = this->addNewOrder(p, n);
 			break;
 		case csCode:
+			res = this->closeOrder(p, n);
 			break;
 		default:
 			res = -1;
@@ -141,7 +156,29 @@ int ProcessData::process(string line)
 	Output:
 		return the result as required
 */
-int ProcessData::insert(const string *sp, const int n)
+
+
+CurrencyPairInfoTree* ProcessData::findTreeOfPair(string baseCurrency, string quoteCurrency) {
+	CurrencyPairInfoTree* exchange = ((LList<CurrencyPairInfoTree>*)data)->getFirstNode();
+	while (exchange != NULL && !exchange->isEqual(baseCurrency, quoteCurrency))
+	{
+		((LList<CurrencyPairInfoTree>*)data)->moveNextNode();
+		exchange = ((LList<CurrencyPairInfoTree>*)data)->getCurrentNode();
+	}
+	return exchange;
+}
+
+OrderInfoTree* ProcessData::findOrderTree(string baseCurrency, string quoteCurrency) {
+	OrderInfoTree* exchange = ((LList<OrderInfoTree>*)orderData)->getFirstNode();
+	while (exchange != NULL && !exchange->isEqual(baseCurrency, quoteCurrency))
+	{
+		((LList<OrderInfoTree>*)orderData)->moveNextNode();
+		exchange = ((LList<OrderInfoTree>*)orderData)->getCurrentNode();
+	}
+	return exchange;
+}
+
+int ProcessData::insert(const string* sp, const int n)
 {
 	if (n != 6) return -1;
 
@@ -155,28 +192,18 @@ int ProcessData::insert(const string *sp, const int n)
 
 	CurrencyPairInfoTree* treePos = findTreeOfPair(baseCurrency, quoteCurrency);
 	if (treePos == NULL) {
-		CurrencyPairInfoTree*newTree = new CurrencyPairInfoTree(baseCurrency, quoteCurrency);
+		CurrencyPairInfoTree* newTree = new CurrencyPairInfoTree(baseCurrency, quoteCurrency);
 		((LList<CurrencyPairInfoTree>*)data)->insertAtEnd(*newTree);
 	}
 	treePos = findTreeOfPair(baseCurrency, quoteCurrency);
-	int result = treePos->insert(mDataToInsert);
-	
-	cout << "After add : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :"<<endl;
+	int result = treePos->insert(mDataToInsert, false);
+
+	cout << "After add : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
 	treePos->printTreeStructure();
 	treePos = nullptr;
 	cout << endl << endl;
 
 	return result;
-}
-
-CurrencyPairInfoTree* ProcessData::findTreeOfPair(string baseCurrency, string quoteCurrency) {
-	CurrencyPairInfoTree* exchange = ((LList<CurrencyPairInfoTree>*)data)->getFirstNode();
-	while (exchange != NULL && !exchange->isEqual(baseCurrency, quoteCurrency))
-	{
-		((LList<CurrencyPairInfoTree>*)data)->moveNextNode();
-		exchange = ((LList<CurrencyPairInfoTree>*)data)->getCurrentNode();
-	}
-	return exchange;
 }
 
 int ProcessData::remove(const string* sp, const int n)
@@ -280,3 +307,157 @@ int ProcessData::setMarginPercent(const string* sp, const int n) {
 		return -1;
 	}
 }
+
+int ProcessData::checkIfClosestPairExist(string baseCurr, string quoteCurr, int time, float& u) {
+	CurrencyPairInfoTree* currencyTreePos = findTreeOfPair(baseCurr, quoteCurr);
+	BidAndAsk closestPairData;
+	if (currencyTreePos == NULL) {
+		return -1;
+	}
+	else {
+		if (currencyTreePos->findClosestNode(time) == NULL) {
+			return -1;
+		}
+		else {
+			closestPairData = currencyTreePos->findClosestNode(time)->data.baseData;
+		}
+	}
+
+	
+	if (baseCurr == "USD") {
+		u = closestPairData.askPrice;
+	}
+	else {
+		u = closestPairData.bidPrice;
+	}
+	return 1;
+}
+
+template <typename T>
+static bool stringCpr(T string1, T string2) {
+	return static_cast<string>(string1) == static_cast<string>(string2);
+}
+
+int ProcessData::addNewOrder(const string* sp, const int n) {
+	if (n != 6) {
+		return -1;
+	}
+
+	string baseCurrency = sp[1].c_str();
+	string quoteCurrency = sp[2].c_str();
+	int time = atoi(sp[3].c_str());
+	int lotAmount = atoi(sp[4].c_str());
+	string orderId = sp[5].c_str();
+
+	bool isSell;
+	if (sp[0].c_str() == "OB") {
+		isSell = false;
+	}
+	else {
+		isSell = true;
+	}
+	// Check for validations
+	if (baseCurrency != "USD" && quoteCurrency != "USD") {
+		return -1;
+	}
+
+	if (((LList<string>*)orderIdList)->checkForDuplicate(orderId, stringCpr)) {
+		return -1;
+	}
+
+	if (lotAmount * AMOUNT_EACH_LOT > accountBalance * marginPercent) {
+		return -1;
+	}
+
+	// Check if currency pair info of this pair exist
+	float u1;
+	if (checkIfClosestPairExist(baseCurrency, quoteCurrency, time, u1) == -1) {
+		return -1;
+	}
+	
+	Order mData = Order(orderId, lotAmount, isSell, u1);
+	BaseData<Order> mDataToInsert = BaseData<Order>(time, mData);
+
+	OrderInfoTree* treePos = findOrderTree(baseCurrency, quoteCurrency);
+	if (treePos == NULL) {
+		OrderInfoTree* newTree = new OrderInfoTree(baseCurrency, quoteCurrency);
+		((LList<OrderInfoTree>*)orderData)->insertAtEnd(*newTree);
+	}
+	treePos = findOrderTree(baseCurrency, quoteCurrency);
+
+	treePos->insert(mDataToInsert, true);
+	((LList<string>*)orderIdList)->insertAtEnd(orderId);
+
+	cout << "After add open : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
+	treePos->printTreeStructure();
+	treePos = nullptr;
+	cout << endl << endl;
+
+	return Util::getIntPart( u1*lotAmount*AMOUNT_EACH_LOT);
+}
+
+int ProcessData::closeOrder(const string* sp, const int n) {
+	if (n != 3) {
+		return -1;
+	}
+
+	int time = atoi(sp[1].c_str());
+	string orderId = sp[2].c_str();
+	string command = sp[0].c_str();
+	bool isSell;
+	if (command == "CS") {
+		isSell = true;
+	}
+	else {
+		isSell = false;
+	}
+	int result = closeSpecificOrder(time, orderId, isSell);
+	return result;
+}
+
+int ProcessData::closeSpecificOrder(int time, string orderId, bool isSell) {
+	// If there isn't any order that has this id 
+	if (!((LList<string>*)orderIdList)->checkForDuplicate(orderId, stringCpr)) {
+		return -1;
+	}
+	// Find the existing order with this id and time
+	Node<Order>* closingOrder = NULL;
+	Link<OrderInfoTree>* tempOrderTree = ((LList<OrderInfoTree>*)orderData)->head;
+	if (tempOrderTree == NULL) {
+		return -1;
+	}
+	while (tempOrderTree != NULL) {
+		closingOrder = tempOrderTree->data.searchByIdAndTime(time, orderId, isSell);
+		if (closingOrder != NULL) {
+			break;
+		}
+		else {
+			tempOrderTree = tempOrderTree->next;
+		}
+	}
+	if (closingOrder == NULL) {
+		return -1;
+	}
+	else {
+		// Check if currency pair info of this pair exist
+		float u2;
+		if (checkIfClosestPairExist(tempOrderTree->data.baseCurrency, tempOrderTree->data.quoteCurrency, time, u2) == -1) {
+			return -1;
+		}
+		// Get profit base on each cases
+		float u1 = closingOrder->data.baseData.firstUsdPrice;
+		float profit;
+		if (!closingOrder->data.baseData.isSell) {
+			profit = (u2 - u1) * closingOrder->data.baseData.lotAmount * AMOUNT_EACH_LOT;
+		}
+		else {
+			profit = (u1 - u2) * closingOrder->data.baseData.lotAmount * AMOUNT_EACH_LOT;
+		}
+		// Update account balance and order
+		closingOrder->data.baseData.isClosed = true;
+		accountBalance += profit;
+		return Util::getIntPart(profit);
+	}
+};
+
+

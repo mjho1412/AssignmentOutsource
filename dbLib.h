@@ -44,6 +44,23 @@
 //    cout << n << " ";
 //}
 
+class Order {
+public:
+    string id;
+    int lotAmount;
+    bool isClosed;
+    bool isSell;
+    float firstUsdPrice;
+    Order(string mId, int mLotAmount, bool mIsSell, float mFirstUsdPrice) {
+        id = mId;
+        lotAmount = mLotAmount;
+        isClosed = false;
+        isSell = mIsSell;
+        firstUsdPrice = mFirstUsdPrice;
+    }
+    Order(){}
+};
+
 class BidAndAsk {
 public:
     float bidPrice;
@@ -52,8 +69,7 @@ public:
         bidPrice = mBidPrice;
         askPrice = mAskPrice;
     }
-    BidAndAsk() {
-    }
+    BidAndAsk() {}
 };
 
 template <typename T>
@@ -97,11 +113,13 @@ template <typename T>
 class AVLTree
 {
 private:
+    
+    
+
+public:
     string baseCurrency;
     string quoteCurrency;
     Node<T>* root;
-
-public:
     AVLTree(string baseCurrency, string quoteCurrency)
     {
         this->baseCurrency = baseCurrency;
@@ -126,12 +144,14 @@ public:
         }
     }
 
-    int insert(const BaseData<T>& ele) {
-        root = insertRec(root, ele);
+    int insert(const BaseData<T>& ele, bool isAllowDulicated) {
+        root = insertRec(root, ele, isAllowDulicated);
         return showResult();
     }
 
-    Node<T>* insertRec(Node<T>*& node, const  BaseData<T>& data)
+
+
+    Node<T>* insertRec(Node<T>*& node, const  BaseData<T>& data, bool isAllowDulicated)
     {
         /* 1. Perform the normal BST insertion */
         if (node == NULL) {
@@ -140,16 +160,22 @@ public:
 
 
         if (data.time < node->data.time) {
-            node->left = insertRec(node->left, data);
+            node->left = insertRec(node->left, data, isAllowDulicated);
         }
 
         else if (data.time > node->data.time) {
-            node->right = insertRec(node->right, data);
+            node->right = insertRec(node->right, data, isAllowDulicated);
         }
         else // Equal keys will update ask price and bid price 
         {
-            node->data = data;
-            return node;
+            if (isAllowDulicated) {
+                node->right = insertRec(node->right, data, isAllowDulicated);
+            }
+            else {
+                node->data = data;
+                return node;
+            }
+            
         }
 
         /* 3. Get the balance factor of this ancestor
@@ -374,7 +400,10 @@ public:
 
     Node<T>* search(Node<T>* node, int time)
     {
-        if (node == NULL || node->data.time == time)
+        if (node == NULL)
+            return NULL;
+
+        if(node->data.time == time)
             return node;
 
         if (node->data.time < time)
@@ -397,12 +426,68 @@ public:
        
     }
 
+    void findClosestRec( Node<T>* ptr, int k, int& min_diff, Node<T>*& returnNode)
+    {
+        if (ptr == NULL)
+            return;
+        if (ptr->data.time == k)
+        {
+           // min_diff_key = k;
+            returnNode = ptr;
+            return;
+        }
+
+        if (min_diff > abs(ptr->data.time - k))
+        {
+            min_diff = abs(ptr->data.time - k);
+            //min_diff_key = ptr->data.time;
+            returnNode = ptr;
+        }
+
+        if (k < ptr->data.time)
+            findClosestRec(ptr->left, k, min_diff, returnNode);
+        else
+            findClosestRec(ptr->right, k, min_diff, returnNode);
+    }
+
+    Node<T>* findClosestNode(int timeToFindClosest )
+    {
+        Node<T>* returnNode = NULL;
+        int min_diff = INT_MAX;
+        findClosestRec(root, timeToFindClosest, min_diff, returnNode);
+        if (returnNode == NULL) {
+            return NULL;
+        }
+        else {
+            return returnNode;
+        }
+        
+    }
+
+
+
     void printNSpace(int n)
     {
         for (int i = 0; i < n - 1; i++)
             cout << " ";
     }
 
+
+    
+
+    bool isEqual(string baseCurrency, string quoteCurrency)
+    {
+        return this->baseCurrency == baseCurrency && this->quoteCurrency == quoteCurrency;
+    }
+
+    
+};
+
+class CurrencyPairInfoTree : public  AVLTree<BidAndAsk> {
+public:
+    CurrencyPairInfoTree(string baseCurrency, string quoteCurrency):AVLTree<BidAndAsk>(baseCurrency, quoteCurrency){
+    };
+    CurrencyPairInfoTree() {};
     void printTreeStructure()
     {
         int height = this->getHeightRec(root);
@@ -412,9 +497,9 @@ public:
             cout << "NULL\n";
             return;
         }
-        queue<Node<T>*> q;
+        queue<Node<BidAndAsk>*> q;
         q.push(root);
-        Node<T>* temp;
+        Node<BidAndAsk>* temp;
         int count = 0;
         int maxNode = 1;
         int level = 0;
@@ -434,8 +519,8 @@ public:
             else
             {
 
-                //cout << temp->data.time <<"("<<temp->data.askPrice<<"),("<<temp->data.bidPrice<<")";
-                cout << temp->data.time;
+                cout << temp->data.time <<"("<<temp->data.baseData.askPrice<<","<<temp->data.baseData.bidPrice<<")";
+                //cout << temp->data.time;
                 q.push(temp->left);
                 q.push(temp->right);
             }
@@ -454,16 +539,86 @@ public:
                 return;
         }
     }
-
-    bool isEqual(string baseCurrency, string quoteCurrency)
-    {
-        return this->baseCurrency == baseCurrency && this->quoteCurrency == quoteCurrency;
-    }
 };
 
-class CurrencyPairInfoTree : public  AVLTree<BidAndAsk> {
+class OrderInfoTree : public  AVLTree<Order> {
 public:
-    CurrencyPairInfoTree(string baseCurrency, string quoteCurrency):AVLTree<BidAndAsk>(baseCurrency, quoteCurrency){
+    OrderInfoTree(string baseCurrency, string quoteCurrency) :AVLTree<Order>(baseCurrency, quoteCurrency) {
     };
-    CurrencyPairInfoTree(){}
+    OrderInfoTree() {};
+    Node<Order>* searchByIdAndTimeRec(Node<Order>* node, int time, string orderId, bool isSell)
+    {
+        if (node == NULL)
+            return NULL;
+
+        if (
+            node->data.time == time && 
+            node->data.baseData.id == orderId && 
+            node->data.baseData.isSell == !isSell &&
+            node->data.baseData.isClosed == false
+            )
+            return node;
+
+        if (node->data.time < time)
+            return searchByIdAndTimeRec(node->right, time, orderId, isSell);
+
+        return searchByIdAndTimeRec(node->left, time, orderId, isSell);
+    }
+
+    Node<Order>* searchByIdAndTime(int time, string orderId, bool isSell) {
+        return searchByIdAndTimeRec(root, time, orderId, isSell);
+    }
+
+    void printTreeStructure()
+    {
+        int height = this->getHeightRec(root);
+
+        if (this->root == NULL)
+        {
+            cout << "NULL\n";
+            return;
+        }
+        queue<Node<Order>*> q;
+        q.push(root);
+        Node<Order>* temp;
+        int count = 0;
+        int maxNode = 1;
+        int level = 0;
+        int space = pow(2, height);
+        printNSpace(space / 2);
+        while (!q.empty())
+        {
+            temp = q.front();
+            q.pop();
+
+            if (temp == NULL)
+            {
+                cout << " ";
+                q.push(NULL);
+                q.push(NULL);
+            }
+            else
+            {
+
+                cout << temp->data.time <<"("<<temp->data.baseData.id<<","<<temp->data.baseData.lotAmount<<","<<temp->data.baseData.firstUsdPrice<<")";
+                //cout << temp->data.time;
+                //showData<T>(temp->data.baseData);
+                q.push(temp->left);
+                q.push(temp->right);
+            }
+            printNSpace(space);
+            count++;
+            if (count == maxNode)
+            {
+                cout << endl;
+                count = 0;
+                maxNode *= 2;
+                level++;
+                space /= 2;
+                printNSpace(space / 2);
+            }
+            if (level == height)
+                return;
+        }
+    }
 };
