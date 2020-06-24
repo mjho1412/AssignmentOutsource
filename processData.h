@@ -204,7 +204,7 @@ public:
 	int addNewOrder(const string* sp, const int n);
 	int closeOrder(const string* sp, const int n);
 	int closeSpecificOrder(int time, string orderId, bool isSell);
-	int checkIfClosestPairExist(string baseCurr, string quoteCurr, int time, float& u);
+	int checkIfClosestPairExist(string baseCurr, string quoteCurr, int time, double& u, bool isSelling);
 	
 };
 

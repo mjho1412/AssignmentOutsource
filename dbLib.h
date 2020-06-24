@@ -50,7 +50,7 @@ public:
     int lotAmount;
     bool isClosed;
     bool isSell;
-    float firstUsdPrice;
+    double firstUsdPrice;
     Order(string mId, int mLotAmount, bool mIsSell, float mFirstUsdPrice) {
         id = mId;
         lotAmount = mLotAmount;
@@ -63,9 +63,9 @@ public:
 
 class BidAndAsk {
 public:
-    float bidPrice;
-    float askPrice;
-    BidAndAsk(float mBidPrice, float mAskPrice) {
+    double  bidPrice;
+    double  askPrice;
+    BidAndAsk(double  mBidPrice, double  mAskPrice) {
         bidPrice = mBidPrice;
         askPrice = mAskPrice;
     }
@@ -278,7 +278,6 @@ public:
 
     Node<T>* removeRec(Node<T>*& node, const BaseData<T>& value)
     {
-        // TODO
         if (node == NULL)
             return node;
 
@@ -286,47 +285,30 @@ public:
             node->left = removeRec(node->left, value);
         else if (value.time > node->data.time)
             node->right = removeRec(node->right, value);
-
-        // if key is same as root's key, then  
-        // This is the node to be deleted  
         else
         {
-            // node with only one child or no child  
-            if ((node->left == NULL) ||
-                (node->right == NULL))
+            if ((node->left == NULL) || (node->right == NULL))
             {
                 Node<T>* temp = node->left ?
                     node->left :
                     node->right;
 
-                // No child case  
                 if (temp == NULL)
                 {
                     temp = node;
                     node = NULL;
                 }
-                else // One child case  
-                    *node = *temp; // Copy the contents of  
-                                   // the non-empty child  
+                else   
+                    *node = *temp;
                 free(temp);
             }
             else
             {
-                // node with two children: Get the inorder  
-                // successor (smallest in the right subtree)  
                 Node<T>* temp = getLeftMost(node->left);
-
-                // Copy the inorder successor's  
-                // data to this node  
                 node->data = temp->data;
-
-                // Delete the inorder successor  
                 node->left = removeRec(node->left, temp->data);
             }
         }
-
-        // If the tree had only one node 
-        // then return  
         if (node == NULL)
             return node;
 
@@ -351,26 +333,22 @@ public:
 
 
         // Left Left Case  
-        if (balance > 1 &&
-            leftBalance >= 0)
+        if (balance > 1 && leftBalance >= 0)
             return rightRotate(node);
 
         // Left Right Case  
-        if (balance > 1 &&
-            leftBalance < 0)
+        if (balance > 1 && leftBalance < 0)
         {
             node->left = leftRotate(node->left);
             return rightRotate(node);
         }
 
         // Right Right Case  
-        if (balance < -1 &&
-            rightBalance <= 0)
+        if (balance < -1 &&  rightBalance <= 0)
             return leftRotate(node);
 
         // Right Left Case  
-        if (balance < -1 &&
-            rightBalance > 0)
+        if (balance < -1 && rightBalance > 0)
         {
             node->right = rightRotate(node->right);
             return leftRotate(node);
@@ -552,9 +530,9 @@ public:
             return NULL;
 
         if (
-            node->data.time == time && 
+            //node->data.time == time && 
             node->data.baseData.id == orderId && 
-            node->data.baseData.isSell == !isSell &&
+            node->data.baseData.isSell == isSell &&
             node->data.baseData.isClosed == false
             )
             return node;
@@ -620,5 +598,94 @@ public:
             if (level == height)
                 return;
         }
+    }
+
+    Node<Order>* removeOrderRec(Node<Order>*& node, const BaseData<Order>& value)
+    {
+        if (node == NULL)
+            return node;
+
+        if (value.time < node->data.time)
+            node->left = removeOrderRec(node->left, value);
+        else if (value.time > node->data.time)
+            node->right = removeOrderRec(node->right, value);
+        else if(value.baseData.id != value.baseData.id)
+            node->right = removeOrderRec(node->right, value);
+        else
+        {
+            if ((node->left == NULL) || (node->right == NULL))
+            {
+                Node<Order>* temp = node->left ?
+                    node->left :
+                    node->right;
+
+                if (temp == NULL)
+                {
+                    temp = node;
+                    node = NULL;
+                }
+                else
+                    *node = *temp;
+                free(temp);
+            }
+            else
+            {
+                Node<Order>* temp = getLeftMost(node->left);
+                node->data = temp->data;
+                node->left = removeRec(node->left, temp->data);
+            }
+        }
+        if (node == NULL)
+            return node;
+
+        int balance;
+        if (node == NULL)
+            balance = 0;
+        else {
+            balance = getHeightRec(node->left) - getHeightRec(node->right);
+        }
+        int leftBalance;
+        if (node->left == NULL)
+            leftBalance = 0;
+        else {
+            leftBalance = getHeightRec(node->left->left) - getHeightRec(node->left->right);
+        }
+        int rightBalance;
+        if (node->right == NULL)
+            rightBalance = 0;
+        else {
+            rightBalance = getHeightRec(node->right->left) - getHeightRec(node->right->right);
+        }
+
+
+        // Left Left Case  
+        if (balance > 1 && leftBalance >= 0)
+            return rightRotate(node);
+
+        // Left Right Case  
+        if (balance > 1 && leftBalance < 0)
+        {
+            node->left = leftRotate(node->left);
+            return rightRotate(node);
+        }
+
+        // Right Right Case  
+        if (balance < -1 && rightBalance <= 0)
+            return leftRotate(node);
+
+        // Right Left Case  
+        if (balance < -1 && rightBalance > 0)
+        {
+            node->right = rightRotate(node->right);
+            return leftRotate(node);
+        }
+
+        return node;
+    }
+
+    int removeOrder(const BaseData<Order>& value)
+    {
+        root = removeOrderRec(root, value);
+        return showResult();
     }
 };

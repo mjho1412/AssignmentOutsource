@@ -308,7 +308,7 @@ int ProcessData::setMarginPercent(const string* sp, const int n) {
 	}
 }
 
-int ProcessData::checkIfClosestPairExist(string baseCurr, string quoteCurr, int time, float& u) {
+int ProcessData::checkIfClosestPairExist(string baseCurr, string quoteCurr, int time, double& u, bool isSelling) {
 	CurrencyPairInfoTree* currencyTreePos = findTreeOfPair(baseCurr, quoteCurr);
 	BidAndAsk closestPairData;
 	if (currencyTreePos == NULL) {
@@ -323,13 +323,14 @@ int ProcessData::checkIfClosestPairExist(string baseCurr, string quoteCurr, int 
 		}
 	}
 
-	
-	if (baseCurr == "USD") {
+	if (isSelling) {
 		u = closestPairData.askPrice;
 	}
 	else {
 		u = closestPairData.bidPrice;
 	}
+	
+	
 	return 1;
 }
 
@@ -370,8 +371,8 @@ int ProcessData::addNewOrder(const string* sp, const int n) {
 	}
 
 	// Check if currency pair info of this pair exist
-	float u1;
-	if (checkIfClosestPairExist(baseCurrency, quoteCurrency, time, u1) == -1) {
+	double u1;
+	if (checkIfClosestPairExist(baseCurrency, quoteCurrency, time, u1, isSell) == -1) {
 		return -1;
 	}
 	
@@ -388,7 +389,7 @@ int ProcessData::addNewOrder(const string* sp, const int n) {
 	treePos->insert(mDataToInsert, true);
 	((LList<string>*)orderIdList)->insertAtEnd(orderId);
 
-	cout << "After add open : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
+	cout << "After add open order : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
 	treePos->printTreeStructure();
 	treePos = nullptr;
 	cout << endl << endl;
@@ -412,6 +413,11 @@ int ProcessData::closeOrder(const string* sp, const int n) {
 		isSell = false;
 	}
 	int result = closeSpecificOrder(time, orderId, isSell);
+
+	// After closing 1 order, check for account neagtive, if is negative than mass closing 
+	if (accountBalance < 0) {
+
+	}
 	return result;
 }
 
@@ -423,31 +429,35 @@ int ProcessData::closeSpecificOrder(int time, string orderId, bool isSell) {
 	// Find the existing order with this id and time
 	Node<Order>* closingOrder = NULL;
 	Link<OrderInfoTree>* tempOrderTree = ((LList<OrderInfoTree>*)orderData)->head;
-	if (tempOrderTree == NULL) {
-		return -1;
-	}
-	while (tempOrderTree != NULL) {
+	while (tempOrderTree != NULL )
+	{
 		closingOrder = tempOrderTree->data.searchByIdAndTime(time, orderId, isSell);
+		//tempOrderTree->data.printTreeStructure();
+		cout << endl;
 		if (closingOrder != NULL) {
 			break;
 		}
 		else {
 			tempOrderTree = tempOrderTree->next;
 		}
+		
 	}
+
 	if (closingOrder == NULL) {
 		return -1;
 	}
 	else {
 		// Check if currency pair info of this pair exist
-		float u2;
-		if (checkIfClosestPairExist(tempOrderTree->data.baseCurrency, tempOrderTree->data.quoteCurrency, time, u2) == -1) {
+		double  u2;
+		if (checkIfClosestPairExist(tempOrderTree->data.baseCurrency, tempOrderTree->data.quoteCurrency, time, u2, !isSell) == -1) {
 			return -1;
 		}
+		
 		// Get profit base on each cases
-		float u1 = closingOrder->data.baseData.firstUsdPrice;
-		float profit;
-		if (!closingOrder->data.baseData.isSell) {
+		double  u1 = closingOrder->data.baseData.firstUsdPrice;
+		double  profit;
+		if (closingOrder->data.baseData.isSell) {
+			
 			profit = (u2 - u1) * closingOrder->data.baseData.lotAmount * AMOUNT_EACH_LOT;
 		}
 		else {
@@ -456,6 +466,13 @@ int ProcessData::closeSpecificOrder(int time, string orderId, bool isSell) {
 		// Update account balance and order
 		closingOrder->data.baseData.isClosed = true;
 		accountBalance += profit;
+		BaseData<Order> dataToDel= BaseData<Order>(closingOrder->data.time, closingOrder->data.baseData);
+		tempOrderTree->data.removeOrder(dataToDel);
+
+		cout << "After remove order : -- " << tempOrderTree->data.baseCurrency << " -- and -- " << tempOrderTree->data.quoteCurrency << " -- :" << endl;
+		tempOrderTree->data.printTreeStructure();
+		cout << endl << endl;
+
 		return Util::getIntPart(profit);
 	}
 };
