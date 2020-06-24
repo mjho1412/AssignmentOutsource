@@ -443,7 +443,6 @@ public:
     }
 
 
-
     void printNSpace(int n)
     {
         for (int i = 0; i < n - 1; i++)
@@ -545,6 +544,18 @@ public:
 
     Node<Order>* searchByIdAndTime(int time, string orderId, bool isSell) {
         return searchByIdAndTimeRec(root, time, orderId, isSell);
+    }
+
+    void massRemove(int (*closeOrder)(void *,int, string, bool), void* classContext) {
+        Node<Order>* returnNode = root;
+        while (root != NULL) {
+            BaseData<Order> rootData = root->data;
+            int time = rootData.time;
+            string orderId = rootData.baseData.id;
+            bool isSell = rootData.baseData.isSell;
+            int returnVal = closeOrder(classContext, time, orderId, isSell);
+            root = removeRec(root, rootData);
+        }
     }
 
     void printTreeStructure()

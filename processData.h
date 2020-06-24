@@ -164,6 +164,7 @@ public:
 	bool checkForDuplicate(T inputData, bool (*isEqual)(T, T)) {
 		Link<T>* temp = head;
 		while (temp != NULL) {
+
 			if ((*isEqual)(temp->data, inputData)) {
 				return true;
 			}
@@ -172,6 +173,17 @@ public:
 			}
 		}
 		return false;
+	}
+
+	void printAll() {
+		cout << "Printing id list" << endl;
+		Link<T>* temp = head;
+		while (temp != NULL) {
+			cout << static_cast<string>(temp->data)<< " << ";
+			temp = temp->next;
+	
+		}
+		cout << endl;
 	}
 };
 
@@ -205,7 +217,6 @@ public:
 	int closeOrder(const string* sp, const int n);
 	int closeSpecificOrder(int time, string orderId, bool isSell);
 	int checkIfClosestPairExist(string baseCurr, string quoteCurr, int time, double& u, bool isSelling);
-	
 };
 
 class Util {

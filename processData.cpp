@@ -124,16 +124,36 @@ int ProcessData::process(string line)
 			res = this->remove(p, n);
 			break;
 		case obCode:
-			res = this->addNewOrder(p, n);
+			if (accountBalance < 0) {
+				res = -1;
+			}
+			else {
+				res = this->addNewOrder(p, n);
+			}	
 			break;
 		case cbCode:
-			res = this->closeOrder(p, n);
+			if (accountBalance < 0) {
+				res = -1;
+			}
+			else {
+				res = this->closeOrder(p, n);
+			}
 			break;
 		case osCode:
-			res = this->addNewOrder(p, n);
+			if (accountBalance < 0) {
+				res = -1;
+			}
+			else {
+				res = this->addNewOrder(p, n);
+			}
 			break;
 		case csCode:
-			res = this->closeOrder(p, n);
+			if (accountBalance < 0) {
+				res = -1;
+			}
+			else {
+				res = this->closeOrder(p, n);
+			}
 			break;
 		default:
 			res = -1;
@@ -397,6 +417,11 @@ int ProcessData::addNewOrder(const string* sp, const int n) {
 	return Util::getIntPart( u1*lotAmount*AMOUNT_EACH_LOT);
 }
 
+int forwarder(void* context, int a, string b, bool c) {
+	return static_cast<ProcessData*>(context)->closeSpecificOrder(a, b, c);
+	
+};
+
 int ProcessData::closeOrder(const string* sp, const int n) {
 	if (n != 3) {
 		return -1;
@@ -413,16 +438,26 @@ int ProcessData::closeOrder(const string* sp, const int n) {
 		isSell = false;
 	}
 	int result = closeSpecificOrder(time, orderId, isSell);
-
 	// After closing 1 order, check for account neagtive, if is negative than mass closing 
 	if (accountBalance < 0) {
-
+		cout << "het tien";
+		Link<OrderInfoTree>* tempOrderTree = ((LList<OrderInfoTree>*)orderData)->head;
+		while (tempOrderTree != NULL)
+		{
+			//((LList<string>*)orderIdList)->printAll();
+			tempOrderTree->data.massRemove(&forwarder, this);
+			tempOrderTree = tempOrderTree->next;
+		}
 	}
 	return result;
 }
 
+
+
 int ProcessData::closeSpecificOrder(int time, string orderId, bool isSell) {
 	// If there isn't any order that has this id 
+	//((LList<string>*)orderIdList)->printAll(); 
+	//cout << "dasd : " << orderId<<endl;
 	if (!((LList<string>*)orderIdList)->checkForDuplicate(orderId, stringCpr)) {
 		return -1;
 	}
@@ -433,7 +468,6 @@ int ProcessData::closeSpecificOrder(int time, string orderId, bool isSell) {
 	{
 		closingOrder = tempOrderTree->data.searchByIdAndTime(time, orderId, isSell);
 		//tempOrderTree->data.printTreeStructure();
-		cout << endl;
 		if (closingOrder != NULL) {
 			break;
 		}
