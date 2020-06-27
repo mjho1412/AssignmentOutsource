@@ -1,8 +1,9 @@
 #include "processData.h"
 
-const int AMOUNT_EACH_LOT = 100000;
+const double AMOUNT_EACH_LOT = 100000.0000;
+const double SCALE_FACTOR = 1000000;
 
-enum CodeValue
+enum class CodeValue
 {
 	sdCode,
 	cdCode,
@@ -17,16 +18,16 @@ enum CodeValue
 };
 
 static map<string, CodeValue> s_mapCodeValues = {
-	{"SD", sdCode},
-	{"CD", cdCode},
-	{"SL", slCode},
-	{"INS", insCode},
-	{"DEL", delCode},
-	{"UPD", updCode},
-	{"OB", obCode},
-	{"CB", cbCode},
-	{"OS", osCode},
-	{"CS", csCode}};
+	{"SD", CodeValue::sdCode},
+	{"CD", CodeValue::cdCode},
+	{"SL", CodeValue::slCode},
+	{"INS", CodeValue::insCode},
+	{"DEL", CodeValue::delCode},
+	{"UPD", CodeValue::updCode},
+	{"OB", CodeValue::obCode},
+	{"CB", CodeValue::cbCode},
+	{"OS", CodeValue::osCode},
+	{"CS", CodeValue::csCode}};
 
 ProcessData::ProcessData()
 {
@@ -68,7 +69,7 @@ int ProcessData::split(string line, string *&sp)
 			return 0;
 		}
 	}
-	if (lastpos < line.length())
+	if (lastpos < (int)line.length())
 	{
 		sp[idx] = line.substr(lastpos, pos - lastpos);
 		idx++;
@@ -82,7 +83,7 @@ int ProcessData::split(string line, string *&sp)
 int ProcessData::count_space(string s) {
 	int count = 0;
 
-	for (int i = 0; i < s.size(); i++)
+	for (int i = 0; i < (int)s.size(); i++)
 		if (s[i] == ' ') count++;
 
 	return count;
@@ -105,25 +106,25 @@ int ProcessData::process(string line)
 	{
 		switch (s_mapCodeValues[p[0]])
 		{
-		case sdCode:
+		case CodeValue::sdCode:
 			res = this->createOrAdjustMarginAccount(p, n);
 			break;
-		case cdCode:
+		case CodeValue::cdCode:
 			res = this->checkMarginAccount(p, n);
 			break;
-		case slCode:
+		case CodeValue::slCode:
 			res = this->setMarginPercent(p, n);
 			break;
-		case insCode:
+		case CodeValue::insCode:
 			res = this->insert(p, n);
 			break;
-		case updCode:
+		case CodeValue::updCode:
 			res = this->update(p, n);
 			break;
-		case delCode:
+		case CodeValue::delCode:
 			res = this->remove(p, n);
 			break;
-		case obCode:
+		case CodeValue::obCode:
 			if (accountBalance < 0) {
 				res = -1;
 			}
@@ -131,7 +132,7 @@ int ProcessData::process(string line)
 				res = this->addNewOrder(p, n);
 			}	
 			break;
-		case cbCode:
+		case CodeValue::cbCode:
 			if (accountBalance < 0) {
 				res = -1;
 			}
@@ -139,7 +140,7 @@ int ProcessData::process(string line)
 				res = this->closeOrder(p, n);
 			}
 			break;
-		case osCode:
+		case CodeValue::osCode:
 			if (accountBalance < 0) {
 				res = -1;
 			}
@@ -147,7 +148,7 @@ int ProcessData::process(string line)
 				res = this->addNewOrder(p, n);
 			}
 			break;
-		case csCode:
+		case CodeValue::csCode:
 			if (accountBalance < 0) {
 				res = -1;
 			}
@@ -205,8 +206,8 @@ int ProcessData::insert(const string* sp, const int n)
 	string baseCurrency = sp[1].c_str();
 	string quoteCurrency = sp[2].c_str();
 	int time = atoi(sp[3].c_str());
-	float bidPrice = stof(sp[4]);
-	float askPrice = stof(sp[5]);
+	double bidPrice = stof(sp[4]);
+	double askPrice = stof(sp[5]);
 	BidAndAsk mData = BidAndAsk(bidPrice, askPrice);
 	BaseData<BidAndAsk> mDataToInsert = BaseData<BidAndAsk>(time, mData);
 
@@ -218,10 +219,10 @@ int ProcessData::insert(const string* sp, const int n)
 	treePos = findTreeOfPair(baseCurrency, quoteCurrency);
 	int result = treePos->insert(mDataToInsert, false);
 
-	cout << "After add : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
-	treePos->printTreeStructure();
+	//cout << "After add : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
+	//treePos->printTreeStructure();
 	treePos = nullptr;
-	cout << endl << endl;
+	//cout << endl << endl;
 
 	return result;
 }
@@ -251,10 +252,10 @@ int ProcessData::remove(const string* sp, const int n)
 	else {
 		int result = treePos->removeByRange(startTime, endTime);
 		
-		cout << "After remove : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
-		treePos->printTreeStructure();
+		//cout << "After remove : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
+		//treePos->printTreeStructure();
 		treePos = nullptr;
-		cout << endl << endl;
+		//cout << endl << endl;
 		return result;
 	}
 }
@@ -268,8 +269,8 @@ int ProcessData::update(const string* sp, const int n)
 	string baseCurrency = sp[1].c_str();
 	string quoteCurrency = sp[2].c_str();
 	int time = atoi(sp[3].c_str());
-	float bidPrice = stof(sp[4]);
-	float askPrice = stof(sp[5]);
+	double bidPrice = stof(sp[4]);
+	double askPrice = stof(sp[5]);
 	BidAndAsk mData = BidAndAsk(bidPrice, askPrice);
 	BaseData<BidAndAsk> mDataToUpdate = BaseData<BidAndAsk>(time, mData);
 
@@ -281,10 +282,10 @@ int ProcessData::update(const string* sp, const int n)
 	else {
 		int result = treePos->updateNode(mDataToUpdate);
 		
-		cout << "After update : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
-		treePos->printTreeStructure();
+		//cout << "After update : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
+		//treePos->printTreeStructure();
 		treePos = nullptr;
-		cout << endl << endl;
+		//cout << endl << endl;
 		return result;
 	}
 }
@@ -294,7 +295,7 @@ int ProcessData::createOrAdjustMarginAccount(const string* sp, const int n) {
 		return -1;
 	}
 
-	int newBalance = stof(sp[1]);
+	double newBalance = stof(sp[1]);
 	has_opened_margin_account = true;
 	accountBalance = newBalance;
 	return 1;
@@ -319,16 +320,24 @@ int ProcessData::setMarginPercent(const string* sp, const int n) {
 	if (n != 2) {
 		return -1;
 	}
+	double newMarginPercent = atoi(sp[1].c_str());
 
 	if (has_opened_margin_account) {
-		return Util::getIntPart(accountBalance * marginPercent);
+		if (newMarginPercent <= 0) {
+			return -1;
+		}
+		else {
+			marginPercent = newMarginPercent;
+			return Util::getIntPart(accountBalance * marginPercent);
+		}
+		
 	}
 	else {
 		return -1;
 	}
 }
 
-int ProcessData::checkIfClosestPairExist(string baseCurr, string quoteCurr, int time, double& u, bool isSelling) {
+int ProcessData::checkIfClosestPairExist(string baseCurr, string quoteCurr, int time, double& bidPrice, double& askPrice, bool isSelling) {
 	CurrencyPairInfoTree* currencyTreePos = findTreeOfPair(baseCurr, quoteCurr);
 	BidAndAsk closestPairData;
 	if (currencyTreePos == NULL) {
@@ -343,12 +352,14 @@ int ProcessData::checkIfClosestPairExist(string baseCurr, string quoteCurr, int 
 		}
 	}
 
-	if (isSelling) {
+	bidPrice = closestPairData.bidPrice;
+	askPrice = closestPairData.askPrice;
+	/*if (isSelling) {
 		u = closestPairData.askPrice;
 	}
 	else {
 		u = closestPairData.bidPrice;
-	}
+	}*/
 	
 	
 	return 1;
@@ -367,11 +378,12 @@ int ProcessData::addNewOrder(const string* sp, const int n) {
 	string baseCurrency = sp[1].c_str();
 	string quoteCurrency = sp[2].c_str();
 	int time = atoi(sp[3].c_str());
-	int lotAmount = atoi(sp[4].c_str());
+	double lotAmount = atof(sp[4].c_str());
 	string orderId = sp[5].c_str();
 
 	bool isSell;
-	if (sp[0].c_str() == "OB") {
+	string command = sp[0].c_str();
+	if (command ==  "OB") {
 		isSell = false;
 	}
 	else {
@@ -392,8 +404,15 @@ int ProcessData::addNewOrder(const string* sp, const int n) {
 
 	// Check if currency pair info of this pair exist
 	double u1;
-	if (checkIfClosestPairExist(baseCurrency, quoteCurrency, time, u1, isSell) == -1) {
+	double bidPrice, askPrice;
+	if (checkIfClosestPairExist(baseCurrency, quoteCurrency, time, bidPrice, askPrice, isSell) == -1) {
 		return -1;
+	}
+	if (isSell) {
+		u1 = bidPrice;
+	}
+	else {
+		u1 = askPrice;
 	}
 	
 	Order mData = Order(orderId, lotAmount, isSell, u1);
@@ -409,12 +428,15 @@ int ProcessData::addNewOrder(const string* sp, const int n) {
 	treePos->insert(mDataToInsert, true);
 	((LList<string>*)orderIdList)->insertAtEnd(orderId);
 
-	cout << "After add open order : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
-	treePos->printTreeStructure();
+	//cout << "After add open order : -- " << baseCurrency << " -- and -- " << quoteCurrency << " -- :" << endl;
+	//treePos->printTreeStructure();
 	treePos = nullptr;
-	cout << endl << endl;
-
-	return Util::getIntPart( u1*lotAmount*AMOUNT_EACH_LOT);
+	//cout << endl << endl;
+	//cout << u1 <<" "<< lotAmount <<" "<< AMOUNT_EACH_LOT;
+	double returnValue = (floor(u1 * lotAmount*SCALE_FACTOR) / SCALE_FACTOR) * AMOUNT_EACH_LOT;
+	//cout << returnValue;
+	
+	return Util::getIntPart(returnValue);
 }
 
 int forwarder(void* context, int a, string b, bool c) {
@@ -440,7 +462,6 @@ int ProcessData::closeOrder(const string* sp, const int n) {
 	int result = closeSpecificOrder(time, orderId, isSell);
 	// After closing 1 order, check for account neagtive, if is negative than mass closing 
 	if (accountBalance < 0) {
-		cout << "het tien";
 		Link<OrderInfoTree>* tempOrderTree = ((LList<OrderInfoTree>*)orderData)->head;
 		while (tempOrderTree != NULL)
 		{
@@ -483,8 +504,15 @@ int ProcessData::closeSpecificOrder(int time, string orderId, bool isSell) {
 	else {
 		// Check if currency pair info of this pair exist
 		double  u2;
-		if (checkIfClosestPairExist(tempOrderTree->data.baseCurrency, tempOrderTree->data.quoteCurrency, time, u2, !isSell) == -1) {
+		double bidPrice, askPrice;
+		if (checkIfClosestPairExist(tempOrderTree->data.baseCurrency, tempOrderTree->data.quoteCurrency, time, bidPrice, askPrice, !isSell) == -1) {
 			return -1;
+		}
+		if (!isSell) {
+			u2 = askPrice;
+		}
+		else {
+			u2 = bidPrice;
 		}
 		
 		// Get profit base on each cases
@@ -498,14 +526,21 @@ int ProcessData::closeSpecificOrder(int time, string orderId, bool isSell) {
 			profit = (u1 - u2) * closingOrder->data.baseData.lotAmount * AMOUNT_EACH_LOT;
 		}
 		// Update account balance and order
+		double proFitInUsd;
+		if (tempOrderTree->data.baseCurrency == "USD") {
+			proFitInUsd = double(profit / askPrice);
+		}
+		else {
+			proFitInUsd = profit;
+		}
 		closingOrder->data.baseData.isClosed = true;
-		accountBalance += profit;
+		accountBalance += proFitInUsd;
 		BaseData<Order> dataToDel= BaseData<Order>(closingOrder->data.time, closingOrder->data.baseData);
 		tempOrderTree->data.removeOrder(dataToDel);
 
-		cout << "After remove order : -- " << tempOrderTree->data.baseCurrency << " -- and -- " << tempOrderTree->data.quoteCurrency << " -- :" << endl;
-		tempOrderTree->data.printTreeStructure();
-		cout << endl << endl;
+		//cout << "After remove order : -- " << tempOrderTree->data.baseCurrency << " -- and -- " << tempOrderTree->data.quoteCurrency << " -- :" << endl;
+		//tempOrderTree->data.printTreeStructure();
+		//cout << endl << endl;
 
 		return Util::getIntPart(profit);
 	}
